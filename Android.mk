@@ -5,48 +5,30 @@
 LOCAL_PATH := $(my-dir)
 include $(CLEAR_VARS)
 
-# Set ANDROID_JPEG_USE_VENUM to true to enable VeNum optimizations
-ANDROID_JPEG_USE_VENUM := true
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+	# Set ANDROID_JPEG_USE_VENUM to true to enable VeNum optimizations
+	ANDROID_JPEG_USE_VENUM := true
+	LOCAL_ARM_NEON  := true
+	LOCAL_CFLAGS := $(LOCAL_CFLAGS) -DANDROID_JPEG_USE_VENUM
+	libsimd_SOURCES_DIST = simd/jsimd_arm_neon.S \
+                       asm/armv7/jdcolor-armv7.S asm/armv7/jdidct-armv7.S \
+                       simd/jsimd_arm.c
+else
+	ANDROID_JPEG_USE_VENUM := false
+	libsimd_SOURCES_DIST = jsimd_none.c
+endif
 
-# Disable VeNum optimizations if they are not supported on the build target
-#ifneq ($(ARCH_ARM_HAVE_VFP),true)
-#ANDROID_JPEG_USE_VENUM := false
-#else
-#ifneq ($(ARCH_ARM_HAVE_NEON),true)
-#ANDROID_JPEG_USE_VENUM := false
-#endif
-#endif
-LOCAL_ARM_NEON  := true
- 
-# From autoconf-generated Makefile
-EXTRA_DIST = simd/nasm_lt.sh simd/jcclrmmx.asm simd/jcclrss2.asm simd/jdclrmmx.asm simd/jdclrss2.asm \
-	simd/jdmrgmmx.asm simd/jdmrgss2.asm simd/jcclrss2-64.asm simd/jdclrss2-64.asm \
-	simd/jdmrgss2-64.asm simd/CMakeLists.txt
- 
-libsimd_SOURCES_DIST = simd/jsimd_arm_neon.S \
-                       asm/armv7//jdcolor-armv7.S asm/armv7/jdidct-armv7.S \
-                       simd/jsimd_arm.c 
-
-# or jsimd_none.c
-
- 
 LOCAL_SRC_FILES := $(libsimd_SOURCES_DIST)
 
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/simd \
                     $(LOCAL_PATH)/android
- 
-LOCAL_CFLAGS := -DANDROID_JPEG_USE_VENUM
-AM_CFLAGS := -march=armv7-a -mfpu=neon
-AM_CCASFLAGS := -march=armv7-a -mfpu=neon
- 
-LOCAL_MODULE_TAGS := debug
- 
+
 LOCAL_MODULE := libsimd
  
 include $(BUILD_STATIC_LIBRARY)
  
 ######################################################
-###           libjpeg.a                       ##
+###           libjpeg.a                             ##
 ######################################################
  
 include $(CLEAR_VARS)
@@ -62,9 +44,6 @@ libjpeg_SOURCES_DIST =  jcapimin.c jcapistd.c jccoefct.c jccolor.c \
         jidctred.c jquant1.c jquant2.c jutils.c jmemmgr.c jmemnobs.c \
 	jaricom.c jcarith.c jdarith.c \
 	turbojpeg.c transupp.c jdatadst-tj.c jdatasrc-tj.c
-#	turbojpeg-mapfile
-
-#possible adds jmem-android.c jmemnobs.c jmemmgr.c jmem-ashmem.c 
 
 LOCAL_SRC_FILES:= $(libjpeg_SOURCES_DIST)
  
@@ -75,13 +54,11 @@ LOCAL_C_INCLUDES := $(LOCAL_PATH) \
                     $(LOCAL_PATH)/android
  
 LOCAL_CFLAGS := -DAVOID_TABLES  -O3 -fstrict-aliasing -fprefetch-loop-arrays  -DANDROID \
-        -DANDROID_TILE_BASED_DECODE -DENABLE_ANDROID_NULL_CONVERT -DANDROID_JPEG_USE_VENUM
+        -DANDROID_TILE_BASED_DECODE -DENABLE_ANDROID_NULL_CONVERT
 
-#-DANDROID_TILE_BASED_DECODE -DUSE_ANDROID_ASHMEM 
- 
-LOCAL_MODULE_PATH := $(TARGET_OUT_OPTIONAL_STATIC_LIBRARY)
- 
-LOCAL_MODULE_TAGS := debug
+ifeq ($(TARGET_ARCH_ABI),armeabi-v7a)
+	LOCAL_CFLAGS := $(LOCAL_CFLAGS) -DANDROID_JPEG_USE_VENUM
+endif
  
 LOCAL_MODULE := libjpeg
 
